@@ -1,118 +1,87 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Desktop.Robot;
-using Desktop.Robot.Extensions;
+using TibiaBot;
 
+var tibiaProcess = Process.GetProcessesByName("client").FirstOrDefault();
 
-const uint WM_KEYDOWN = 0x100;
-const uint WM_KEYUP = 0x0101;
-
-
-[DllImport("user32.dll")]
-static extern IntPtr PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-
-void emulateHumanDelay()
+if (tibiaProcess == null)
 {
-    Thread.Sleep(100);
+    Console.WriteLine("¬¬ tibia is not opened you modafoca!");
+    return;
 }
 
-IntPtr getKeyPointer(Key key)
+KeyManager keyManager = new(tibiaProcess);
+
+Queue<Key> _queue = new();
+
+async Task EatFood()
 {
-    var metadata = key.GetKeycode();
-    return (IntPtr)metadata.Keycode;
+    Console.WriteLine("eat food enabled.");
+    await PressKeyOnInterval(TimeSpan.FromMinutes(1), Key.Nine);
 }
 
-// IntPtr hWnd;
-Process? p = Process.GetProcessesByName("client").FirstOrDefault();
-
-if (p != null)
+async Task AtkSelectedMob()
 {
-    IntPtr window = p.MainWindowHandle;
-
-    void pressKey(Key key)
-    {
-        var keyPointer = getKeyPointer(key);
-        PostMessage(window, WM_KEYDOWN, keyPointer, IntPtr.Zero);
-    }
-
-    void releaseKey(Key key)
-    {
-        var keyPointer = getKeyPointer(key);
-        PostMessage(window, WM_KEYUP, keyPointer, IntPtr.Zero);
-    }
-
-    void sendKey(Key key)
-    {
-        emulateHumanDelay();
-        pressKey(key);
-        emulateHumanDelay();
-        releaseKey(key);
-        emulateHumanDelay();
-    }
-
-    sendKey(Key.F);
-    Thread.Sleep(300);
-    sendKey(Key.Nine);
-    Thread.Sleep(1000);
-    sendKey(Key.Three);
+    Console.WriteLine("atk selected mob enabled.");
+    await PressKeyOnInterval(TimeSpan.FromSeconds(3.5), Key.Three);
 }
 
+async Task UseHealSkill()
+{
+    Console.WriteLine("use heal skill enabled.");
+    await PressKeyOnInterval(TimeSpan.FromSeconds(1.5), Key.F);
+}
 
-// void sendKeystroke()
-// {
+async Task PressKeyOnInterval(TimeSpan interval, Key key)
+{
+    var cooldown = interval.Milliseconds;
+    while (true)
+    {
+        lock (_queue)
+        {
+            _queue.Append(key);
+        }
 
+        await Task.Delay(cooldown);
+    }
+}
 
+async Task ConsumeQueue()
+{
+    var cooldown = 200;
+    var humanDelay = 100;
 
+    while (true)
+    {
+        await Task.Delay(cooldown);
 
-//         // PostMessage(edit, WM_KEYDOWN, (IntPtr)(Keys.Control), IntPtr.Zero);
-//         // PostMessage(edit, WM_KEYDOWN, (IntPtr)(Keys.A), IntPtr.Zero);
-//         // PostMessage(edit, WM_KEYUP, (IntPtr)(Keys.A), IntPtr.Zero);
-//         // PostMessage(edit, WM_KEYUP, (IntPtr)(Keys.Control), IntPtr.Zero);
+        if (_queue.Count == 0)
+            continue;
 
-// }
+        Key key;
+        lock (_queue)
+        {
+            key = _queue.Dequeue();
+        }
 
+        keyManager.SendKeyDown(key);
+        await Task.Delay(humanDelay);
+        keyManager.SendKeyUp(key);
+    }
+}
 
-// [DllImport("User32.dll")]
-// static extern int SetForegroundWindow(IntPtr point);
+Console.WriteLine("starting threads");
 
-// Process? p = Process.GetProcessesByName("client").FirstOrDefault();
-// if (p != null)
-// {
-//     var robot = new Robot();
-//     IntPtr h = p.MainWindowHandle;
+ConsumeQueue().Start();
+EatFood().Start();
+AtkSelectedMob().Start();
+UseHealSkill().Start();
 
-//     void foregroundGame()
-//     {
-//         Thread.Sleep(300);
-//         SetForegroundWindow(h);
-//         Thread.Sleep(300);
-//     }
+Console.WriteLine("Press X to close.");
 
-//     while (true)
-//     {
-//         foregroundGame();
-
-//         //food
-//         Console.WriteLine("Using food");
-//         robot.KeyPress(Key.Nine);
-//         Thread.Sleep(300);
-
-//         //heal skill 10x
-//         for (int i = 0; i < 10; i++)
-//         {
-//             foregroundGame();
-
-//             Console.WriteLine("Using heal skill");
-//             robot.KeyPress(Key.F);
-//             Thread.Sleep(300);
-
-//             Console.WriteLine("Using atk skill");
-//             robot.KeyPress(Key.Three);
-//             Thread.Sleep(1000);
-//         }
-
-//         Thread.Sleep(5000); // wait 5 seconds
-//     }
-// }
-
-
+char key = ' ';
+while (key != 'x')
+{
+    key = Console.ReadKey().KeyChar;
+}

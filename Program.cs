@@ -18,7 +18,7 @@ Queue<Key> _queue = new();
 async Task EatFood()
 {
     Console.WriteLine("eat food enabled.");
-    await PressKeyOnInterval(TimeSpan.FromMinutes(1), Key.Nine);
+    await PressKeyOnInterval(TimeSpan.FromSeconds(55), Key.Nine);
 }
 
 async Task AtkSelectedMob()
@@ -35,15 +35,18 @@ async Task UseHealSkill()
 
 async Task PressKeyOnInterval(TimeSpan interval, Key key)
 {
-    var cooldown = interval.Milliseconds;
+    var cooldown = interval.TotalMilliseconds;
     while (true)
     {
+        await Task.Delay((int)cooldown);
+
+        if (_queue.Count > 10)//avoid flooding the queue
+            continue;
+
         lock (_queue)
         {
-            _queue.Append(key);
+            _queue.Enqueue(key);
         }
-
-        await Task.Delay(cooldown);
     }
 }
 
@@ -71,14 +74,18 @@ async Task ConsumeQueue()
     }
 }
 
-Console.WriteLine("starting threads");
+Console.WriteLine("starting threads....");
 
-ConsumeQueue().Start();
-EatFood().Start();
-AtkSelectedMob().Start();
-UseHealSkill().Start();
+Task.Run(ConsumeQueue);
+Task.Run(EatFood);
+Task.Run(AtkSelectedMob);
+Task.Run(UseHealSkill);
 
-Console.WriteLine("Press X to close.");
+
+
+Thread.Sleep(1000);
+
+Console.WriteLine("Press X to close:");
 
 char key = ' ';
 while (key != 'x')

@@ -33,13 +33,23 @@ async Task UseHealSkill()
     await PressKeyOnInterval(TimeSpan.FromSeconds(1.5), Key.F);
 }
 
+async Task MakeRune()
+{
+    Console.WriteLine("make rune enabled.");
+    await PressKeyOnInterval(TimeSpan.FromSeconds(30), Key.F2);
+}
+
+async Task UseHealingRing()
+{
+    Console.WriteLine("auto use healing ring enabled.");
+    await PressKeyOnInterval(TimeSpan.FromMinutes(20.2), Key.F3);
+}
+
 async Task PressKeyOnInterval(TimeSpan interval, Key key)
 {
     var cooldown = interval.TotalMilliseconds;
     while (true)
     {
-        await Task.Delay((int)cooldown);
-
         if (_queue.Count > 10)//avoid flooding the queue
             continue;
 
@@ -47,6 +57,8 @@ async Task PressKeyOnInterval(TimeSpan interval, Key key)
         {
             _queue.Enqueue(key);
         }
+
+        await Task.Delay((int)cooldown);
     }
 }
 
@@ -74,21 +86,66 @@ async Task ConsumeQueue()
     }
 }
 
-Console.WriteLine("starting threads....");
 
-Task.Run(ConsumeQueue);
-Task.Run(EatFood);
-Task.Run(AtkSelectedMob);
-Task.Run(UseHealSkill);
-
-
-
-Thread.Sleep(1000);
-
-Console.WriteLine("Press X to close:");
-
-char key = ' ';
-while (key != 'x')
+void RunMonkMode()
 {
-    key = Console.ReadKey().KeyChar;
+    Console.WriteLine("starting Monk Mode....");
+
+    Task.Run(ConsumeQueue);
+    Task.Run(EatFood);
+    Task.Run(AtkSelectedMob);
+    Task.Run(UseHealSkill);
 }
+
+void RunRunerMode()
+{
+    Console.WriteLine("starting Runer Mode....");
+    Task.Run(ConsumeQueue);
+    Task.Run(EatFood);
+    Task.Run(MakeRune);
+    Task.Run(UseHealingRing);
+}
+
+
+void WaitForExit()
+{
+    Thread.Sleep(1000);
+
+    Console.WriteLine("Press X to close:");
+
+    char key = ' ';
+    while (key != 'x')
+    {
+        key = Console.ReadKey().KeyChar;
+    }
+}
+
+Console.WriteLine("Please select mode:");
+Console.WriteLine("[1] Monk mode (atk, food, heal)");
+Console.WriteLine("[2] Runner mode (rune, food, ring)");
+
+char selection;
+
+do
+{
+    selection = Console.ReadKey().KeyChar;
+}
+while (selection != '1' && selection != '2');
+
+Console.WriteLine("");
+
+switch (selection)
+{
+    default:
+        Console.WriteLine("invalid mode.");
+        break;
+    case '1':
+        RunMonkMode();
+        break;
+    case '2':
+        RunRunerMode();
+        break;
+}
+
+WaitForExit();
+
